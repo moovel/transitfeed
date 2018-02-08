@@ -88,7 +88,7 @@ def main():
             if options.list_removed:
                 print "Removing route_id=[%s] route_short_name=[%s] route_long_name=[%s] end_date=[%s] date_ranges=%s" % (route_id, route.route_short_name, route.route_long_name, end_date, date_ranges)
         elif len(services) > 1:
-            print "Multiple services for this trip: %s" % services
+            print "Multiple services ([%s]) for route_id=[%s]" % (len(services), route_id)
     print "Removed [%d] route(s)" % removed_routes
 
     schedule.WriteGoogleTransitFeed(output_path)
