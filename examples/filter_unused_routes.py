@@ -23,13 +23,20 @@ import optparse
 import sys
 import transitfeed
 
-RM_IF_END_DATE_BEFORE = date(year=2017, month=6, day=12)
+DATE_CUTOFF_MIN = 20170101  # 1/1/2017; date sanity check
+DATE_CUTOFF_MAX = 20220101  # 1/1/2022; date sanity check
 
 
 def main():
     parser = optparse.OptionParser(
         usage="usage: %prog [options] input_feed output_feed",
         version="%prog "+transitfeed.__version__)
+    parser.add_option("-d", 
+                      "--date-cutoff",
+                      dest="date_cutoff",
+                      type="int",
+                      default=0,
+                      help="Remove all routes before (less than) this date.  Format: yyyymmdd")
     parser.add_option("-l", "--list_removed", dest="list_removed",
                       default=False,
                       action="store_true",
@@ -39,6 +46,16 @@ def main():
         print >>sys.stderr, parser.format_help()
         print >>sys.stderr, "\n\nYou must provide input_feed and output_feed\n\n"
         sys.exit(2)
+    if options.date_cutoff == 0:
+        print >>sys.stderr, "\n\nYou must provide -d|--date-cutoff\n\n"
+        sys.exit(2)
+    if (options.date_cutoff < DATE_CUTOFF_MIN) or (options.date_cutoff > DATE_CUTOFF_MAX):
+        print >>sys.stderr, "-d|--date-cutoff must be an int in the format yyyymmdd and %s < yyyymmdd < %s" % (DATE_CUTOFF_MIN, DATE_CUTOFF_MAX)
+        sys.exit(2)
+    date_str = str(options.date_cutoff)
+    rm_if_end_date_before = date(year=int(date_str[:4]),
+                                 month=int(date_str[4:6]),
+                                 day=int(date_str[6:8]))
     input_path = args[0]
     output_path = args[1]
 
@@ -50,12 +67,8 @@ def main():
     idx = 1
     for route_id, route in schedule.routes.items():
         print("Processing route num [%s], route_id=[%s] route_short_name=[%s] route_long_name=[%s] num trips = [%s]" % (idx, route.route_id, route.route_short_name, route.route_long_name, len(route.trips)))
-        if str(route.route_short_name) == '208':
-            # import pdb
-            # pdb.set_trace()
-            pass
         idx += 1
-        # if this route doesn't have any trips with an end_date after 20170612, then remove it
+        # if this route doesn't have any trips with an end_date after the cutoff date, then remove it
         rm_this_route = True
         date_ranges = set()
         services = set()
@@ -66,17 +79,16 @@ def main():
                             month=int(service.end_date[4:6]),
                             day=int(service.end_date[6:8]))
             date_ranges.add('%s-%s' % service.GetDateRange())
-            if end_date >= RM_IF_END_DATE_BEFORE:
+            if end_date >= rm_if_end_date_before:
                 rm_this_route = False
 
         if rm_this_route:
             removed += 1
             del schedule.routes[route_id]
             if options.list_removed:
-                print "Removing route_id=[%s] route_short_name=[%s] route_long_name=[%s]" % (route_id, route.route_short_name, route.route_long_name)
-                print "date_ranges: %s" % date_ranges
-        elif len(date_ranges) > 1:
-            print "Multiple services for this trip: %s" % date_ranges
+                print "Removing route_id=[%s] route_short_name=[%s] route_long_name=[%s] end_date=[%s] date_ranges=%s" % (route_id, route.route_short_name, route.route_long_name, end_date, date_ranges)
+        elif len(services) > 1:
+            print "Multiple services for this trip: %s" % services
         if removed == 0:
             print "There were no unused routes to remove."
         else:
