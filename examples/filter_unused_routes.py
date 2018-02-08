@@ -63,7 +63,7 @@ def main():
     schedule = loader.Load()
 
     print "Removing unused routes..."
-    removed = 0
+    removed_routes = 0
     idx = 1
     for route_id, route in schedule.routes.items():
         print("Processing route num [%s], route_id=[%s] route_short_name=[%s] route_long_name=[%s] num trips = [%s]" % (idx, route.route_id, route.route_short_name, route.route_long_name, len(route.trips)))
@@ -83,13 +83,13 @@ def main():
                 rm_this_route = False
 
         if rm_this_route:
-            removed += 1
+            removed_routes += 1
             del schedule.routes[route_id]
             if options.list_removed:
                 print "Removing route_id=[%s] route_short_name=[%s] route_long_name=[%s] end_date=[%s] date_ranges=%s" % (route_id, route.route_short_name, route.route_long_name, end_date, date_ranges)
         elif len(services) > 1:
             print "Multiple services for this trip: %s" % services
-    print "Removed [%d] route(s)" % removed
+    print "Removed [%d] route(s)" % removed_routes
 
     schedule.WriteGoogleTransitFeed(output_path)
 
