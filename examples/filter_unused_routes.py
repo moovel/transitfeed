@@ -26,6 +26,7 @@ import transitfeed
 DATE_CUTOFF_MIN = 20170101  # 1/1/2017; date sanity check
 DATE_CUTOFF_MAX = 20220101  # 1/1/2022; date sanity check
 
+
 def remove_unused_routes(schedule, rm_if_end_date_before):
     print "Removing unused routes..."
     removed_routes = 0
@@ -55,6 +56,19 @@ def remove_unused_routes(schedule, rm_if_end_date_before):
         elif len(services) > 1:
             print "Multiple services ([%s]) for route_id=[%s]" % (len(services), route_id)
     print("Removed [%d] route(s) of [%s] total routes, kept [%s] routes" % (removed_routes, total_routes, total_routes - removed_routes))
+
+
+def remove_unused_stops(schedule):
+    num_removed = 0
+    total_stops = len(schedule.stops)
+    print("Removing unused stops. Total number of stops to check = [%s]" % total_stops)
+    for stop_id, stop in schedule.stops.items():
+        if not stop.GetTrips(schedule):
+            num_removed += 1
+            del schedule.stops[stop_id]
+            print("Removed stop_id=[%s] name=[%s])" % (stop_id, stop.stop_name))
+    print("Removed [%s] of [%s] stops, leaving [%s] stops" % (num_removed, total_stops, total_stops - num_removed))
+
 
 
 def main():
@@ -93,6 +107,7 @@ def main():
     schedule = loader.Load()
 
     remove_unused_routes(schedule, rm_if_end_date_before)
+    remove_unused_stops(schedule)
 
     schedule.WriteGoogleTransitFeed(output_path)
 
