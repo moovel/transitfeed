@@ -26,6 +26,36 @@ import transitfeed
 DATE_CUTOFF_MIN = 20170101  # 1/1/2017; date sanity check
 DATE_CUTOFF_MAX = 20220101  # 1/1/2022; date sanity check
 
+def remove_unused_routes(schedule, rm_if_end_date_before):
+    print "Removing unused routes..."
+    removed_routes = 0
+    idx = 1
+    total_routes = len(schedule.routes)
+    for route_id, route in schedule.routes.items():
+        print("Processing route num [%s] of [%s], route_id=[%s] route_short_name=[%s] route_long_name=[%s] num trips = [%s]" % (idx, total_routes, route.route_id, route.route_short_name, route.route_long_name, len(route.trips)))
+        idx += 1
+        # if this route doesn't have any trips with an end_date after the cutoff date, then remove it
+        rm_this_route = True
+        date_ranges = set()
+        services = set()
+        for trip in route.trips:
+            service = trip._schedule.service_periods[trip.service_id]
+            services.add(service)
+            end_date = date(year=int(service.end_date[0:4]),
+                            month=int(service.end_date[4:6]),
+                            day=int(service.end_date[6:8]))
+            date_ranges.add('%s-%s' % service.GetDateRange())
+            if end_date >= rm_if_end_date_before:
+                rm_this_route = False
+
+        if rm_this_route:
+            removed_routes += 1
+            del schedule.routes[route_id]
+            print "Removing route_id=[%s] route_short_name=[%s] route_long_name=[%s] date_ranges=%s" % (route_id, route.route_short_name, route.route_long_name, date_ranges)
+        elif len(services) > 1:
+            print "Multiple services ([%s]) for route_id=[%s]" % (len(services), route_id)
+    print("Removed [%d] route(s) of [%s] total routes, kept [%s] routes" % (removed_routes, total_routes, total_routes - removed_routes))
+
 
 def main():
     parser = optparse.OptionParser(
@@ -62,34 +92,7 @@ def main():
     loader = transitfeed.Loader(input_path)
     schedule = loader.Load()
 
-    print "Removing unused routes..."
-    removed_routes = 0
-    idx = 1
-    total_routes = len(schedule.routes)
-    for route_id, route in schedule.routes.items():
-        print("Processing route num [%s] of [%s], route_id=[%s] route_short_name=[%s] route_long_name=[%s] num trips = [%s]" % (idx, total_routes, route.route_id, route.route_short_name, route.route_long_name, len(route.trips)))
-        idx += 1
-        # if this route doesn't have any trips with an end_date after the cutoff date, then remove it
-        rm_this_route = True
-        date_ranges = set()
-        services = set()
-        for trip in route.trips:
-            service = trip._schedule.service_periods[trip.service_id]
-            services.add(service)
-            end_date = date(year=int(service.end_date[0:4]),
-                            month=int(service.end_date[4:6]),
-                            day=int(service.end_date[6:8]))
-            date_ranges.add('%s-%s' % service.GetDateRange())
-            if end_date >= rm_if_end_date_before:
-                rm_this_route = False
-
-        if rm_this_route:
-            removed_routes += 1
-            del schedule.routes[route_id]
-            print "Removing route_id=[%s] route_short_name=[%s] route_long_name=[%s] date_ranges=%s" % (route_id, route.route_short_name, route.route_long_name, date_ranges)
-        elif len(services) > 1:
-            print "Multiple services ([%s]) for route_id=[%s]" % (len(services), route_id)
-    print("Removed [%d] route(s) of [%s] total routes, kept [%s] routes" % (removed_routes, total_routes, total_routes - removed_routes))
+    remove_unused_routes(schedule, rm_if_end_date_before)
 
     schedule.WriteGoogleTransitFeed(output_path)
 
