@@ -65,8 +65,9 @@ def main():
     print "Removing unused routes..."
     removed_routes = 0
     idx = 1
+    total_routes = len(schedule.routes)
     for route_id, route in schedule.routes.items():
-        print("Processing route num [%s], route_id=[%s] route_short_name=[%s] route_long_name=[%s] num trips = [%s]" % (idx, route.route_id, route.route_short_name, route.route_long_name, len(route.trips)))
+        print("Processing route num [%s] of [%s], route_id=[%s] route_short_name=[%s] route_long_name=[%s] num trips = [%s]" % (idx, total_routes, route.route_id, route.route_short_name, route.route_long_name, len(route.trips)))
         idx += 1
         # if this route doesn't have any trips with an end_date after the cutoff date, then remove it
         rm_this_route = True
@@ -85,10 +86,10 @@ def main():
         if rm_this_route:
             removed_routes += 1
             del schedule.routes[route_id]
-            print "Removing route_id=[%s] route_short_name=[%s] route_long_name=[%s] date_ranges=%s" % (route_id, route.route_short_name, route.route_long_name, end_date, date_ranges)
+            print "Removing route_id=[%s] route_short_name=[%s] route_long_name=[%s] date_ranges=%s" % (route_id, route.route_short_name, route.route_long_name, date_ranges)
         elif len(services) > 1:
             print "Multiple services ([%s]) for route_id=[%s]" % (len(services), route_id)
-    print "Removed [%d] route(s)" % removed_routes
+    print("Removed [%d] route(s) of [%s] total routes, kept [%s] routes" % (removed_routes, total_routes, total_routes - removed_routes))
 
     schedule.WriteGoogleTransitFeed(output_path)
 
